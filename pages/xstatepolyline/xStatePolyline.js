@@ -56,7 +56,9 @@ const polylineMachine = setup({
         // Abandonner le tracé de la polyline
         abandon: () => {
             // Supprimer la variable polyline :
-            
+            polyline.remove();
+            polyline = null;
+            layer.batchDraw();
         },
         // Supprimer le dernier point de la polyline
         removeLastPoint: () => {
@@ -73,19 +75,57 @@ const polylineMachine = setup({
         pasPlein: () => {
             // Retourner vrai si la polyline a moins de 10 points
             // attention : dans le tableau de points, chaque point est représenté par 2 valeurs (coordonnées x et y)
-            
+            return polyline.points().length < 2 * (MAX_POINTS + 1);
         },
         // On peut enlever un point
         plusDeDeuxPoints: () => {
             // Deux coordonnées pour chaque point, plus le point provisoire
-            return polyline.points().length > 6;
+            return polyline.points().length > 4;
         },
     },
 }).createMachine({
+    /** @xstate-layout N4IgpgJg5mDOIC5QAcD2AbAngGQJYDswA6XCdMAYgFkB5AVQGUBRAYWwEkWBpAbQAYAuohSpYuAC65U+YSAAeiPgBoQmRQF91KtFjyEiEAE4BDAO4Eo1es1oA1JvyFIQaMZOmyFCZao1aXGDgExEZmFlaMrBzcjrKuElIyzl4+at6a2oF6ISbm+JYAQsYAxgDWsMglYLHO8e5JoCkqaXwZAbrBBrnhTPjiYIY1Im6JnogATHwArETjUwAcfHNTUwDs8-NTAMwAbM2IAIxbW0TzBwcAnKsXO1sALPdbq3dtOkH6oXmWTLDFxsjVQRxUQJDzJRT7dJtfCoCBwYEdQjAkZgxqIAC0d3mkPR81WRAOOyJRMJR2u43mryynVI5GRoIa8ghvgQBzuL38b2yXTC+Xp9TG3kh43WRCmfAlfCOOzuFxF4w5miAA */
     id: "polyLine",
     initial: "idle",
     states: {
-        idle: {},
+        idle: {
+            on: {
+                MOUSECLICK: {
+                    target: "drawing",
+                    actions: "createLine",
+                },
+            },
+        },
+        drawing: {
+            on: {
+                MOUSEMOVE: {
+                    actions: "setLastPoint",
+                },
+                MOUSECLICK: [
+                    {
+                        guard: "pasPlein",
+                        actions: "addPoint",
+                    },
+                ],
+                Backspace: [
+                    {
+                        guard: "plusDeDeuxPoints",
+                        actions: "removeLastPoint",
+                    },
+                ],
+                Enter: [
+                    {
+                        guard: "plusDeDeuxPoints",
+                        target: "idle",
+                        actions: "saveLine",
+                    },
+                ],
+                Escape: {
+                    target: "idle",
+                    actions: "abandon",
+                },
+            },
+        },
     },
 });
 
